@@ -1,6 +1,6 @@
 # mks
 
-> 体验网站：[https://mks-sinceredoge.vercel.app/](https://mks-sinceredoge.vercel.app/)
+> [https://mks-sinceredoge.vercel.app/](https://mks-sinceredoge.vercel.app/)
 
 ## Project setup
 ```
