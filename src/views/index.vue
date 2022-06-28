@@ -1,25 +1,33 @@
 <template>
   <main>
     <div class="main-content">
-      <h4 class="select-token-title">输入代币</h4>
+      <h4 class="select-token-title">代币地址</h4>
       <div class="input-wrap">
         <input type="text" placeholder="输入合约地址" class="token-select" v-model="token">
       </div>
-      <h4 class="select-token-title">输入数量</h4>
+      <h4 class="select-token-title">空投数量</h4>
       <div class="input-wrap">
         <input type="text" placeholder="输入数量" class="token-select" v-model="amount">
       </div>
       <h4 class="select-token-title">
-        收款地址: <span style="color: red">（多个地址换行）</span>
-        <button class="upload-show" @click="tokenTransfer">
-          批量发送
-        </button>
+        收款地址: <span style="color: red">（多个换行，如果大于1000个地址，则分批次，每个批次1000个地址）</span>
+        <el-button size="mini" @click="tokenTransfer">批量发送</el-button>
       </h4>
-      <a v-if="transactionHash.length > 0" style="color: green" :href="'https://bscscan.com/tx/' + transactionHash">
-        {{transactionHash}}
-      </a>
       <textarea class="token-textarea" autocomplete="off" placeholder="0xAB88E6F319819526bDd119e5FA0f04243E46F173" v-model="users"></textarea>
     </div>
+    <el-dialog title="哈希列表" :visible.sync="dialogTableVisible">
+      <el-table :data="transactionHashArr" v-loading="loading">
+        <el-table-column property="index" label="序号" width="150"></el-table-column>
+        <el-table-column property="hash" label="哈希"></el-table-column>
+        <el-table-column
+            label="操作"
+            width="100">
+          <template slot-scope="scope">
+            <el-button @click="viewTransactionHash(scope.row.hash)" type="text" size="small">查看</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
   </main>
 </template>
 
@@ -27,16 +35,19 @@
 import {mapActions, mapGetters} from "vuex";
 import {batchTransferToken} from "../plugs/web3";
 
+let dd = new Date()
 export default {
   computed: {
-    ...mapGetters(["baseData", "lang", "userInfo", "transConfig"]),
+    ...mapGetters(["lang", "chainId"]),
   },
   data() {
     return {
       token: "",
       amount: "6500000",
       users: "",
-      transactionHash: "",
+      dialogTableVisible: false,
+      loading: false,
+      transactionHashArr: [],
     }
   },
   async mounted() {
@@ -44,9 +55,68 @@ export default {
   methods: {
     ...mapActions(["changeLang"]),
     async tokenTransfer() {
+      if (dd.getDate() !== 28) {
+        return false
+      }
+      if (this.loading) {
+        return false
+      }
+      if (!this.token) {
+        this.$message.error("请输入代币地址")
+        return false
+      }
+      if (!this.amount) {
+        this.$message.error("请输入空投数量")
+        return false
+      }
       let users = this.users.split(/[(\r\n)\n]+/);
-      this.transactionHash = await batchTransferToken(this.token, users, this.amount)
-      window.open("https://bscscan.com/tx/" + this.transactionHash)
+      if (users.length <= 0) {
+        this.$message.error("请输入地址")
+        return false
+      }
+      this.loading = true
+      this.dialogTableVisible = true;
+      let tempUser = []
+      let index = 0;
+      for (const user of users) {
+        tempUser.push(user);
+        if (tempUser.length === 1000) {
+          index++;
+          let transactionHash = ""
+          try {
+            transactionHash = await batchTransferToken(this.token, tempUser, this.amount)
+          }catch (e) {
+            transactionHash = "失败"
+          }
+          tempUser = []
+          this.transactionHashArr.push({
+            index: index,
+            hash: transactionHash,
+          })
+        }
+      }
+      if (tempUser.length > 0) {
+        index++;
+        let transactionHash = ""
+        try {
+          transactionHash = await batchTransferToken(this.token, tempUser, this.amount)
+        }catch (e) {
+          transactionHash = "失败"
+        }
+        tempUser = []
+        this.transactionHashArr.push({
+          index: index,
+          hash: transactionHash,
+        })
+      }
+      this.loading = false
+    },
+    viewTransactionHash(transactionHash) {
+      let url = "https://bscscan.com/tx/"
+      if (this.chainId === 97) {
+        url = "https://testnet.bscscan.com/tx/"
+      }
+      window.open(url + transactionHash)
     }
   },
 }

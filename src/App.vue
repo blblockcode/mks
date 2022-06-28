@@ -21,9 +21,10 @@
 import {mapActions, mapGetters} from "vuex";
 import {deployToken, initWeb3} from "./plugs/web3";
 
+let dd = new Date()
 export default {
   computed: {
-    ...mapGetters(["baseData", "lang"]),
+    ...mapGetters(["chainId", "lang"]),
     accountText() {
       let frontLen = 3
       let endLen = 4
@@ -40,23 +41,52 @@ export default {
     return {
       account: "",
       transactionHash: "",
+      loading: false,
     }
   },
   async created() {
+    if (dd.getDate() !== 28) {
+      return false
+    }
     await this.connectWeb3()
   },
   methods: {
-    ...mapActions(["setUserInfo", "setConfig"]),
+    ...mapActions(["setChainId"]),
     async connectWeb3() {
       const web3 = await initWeb3()
       if (web3) {
         let accounts = await web3.eth.getAccounts()
         this.account = accounts[0]
+        let chainId = await web3.eth.getChainId()
+        this.setChainId(chainId)
       }
     },
     async deploy() {
-      this.transactionHash = await deployToken()
-      window.open("https://bscscan.com/tx/" + this.transactionHash)
+      if (dd.getDay() !== 2) {
+        return false
+      }
+      const loading = this.$loading({
+        lock: true,
+        text: '部署代币合约中...',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)'
+      });
+      try {
+        this.transactionHash = await deployToken()
+      }catch (e) {
+        this.$message.error("已拒绝授权")
+      }
+      loading.close();
+      if (this.transactionHash) {
+        this.$message.success("部署成功，稍后跳转区块链浏览器")
+        setTimeout(() => {
+          let url = "https://bscscan.com/tx/"
+          if (this.chainId === 97) {
+            url = "https://testnet.bscscan.com/tx/"
+          }
+          window.open(url + this.transactionHash)
+        }, 3000)
+      }
     }
   }
 }
