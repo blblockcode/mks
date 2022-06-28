@@ -21,7 +21,6 @@
 import {mapActions, mapGetters} from "vuex";
 import {deployToken, initWeb3} from "./plugs/web3";
 
-let dd = new Date()
 export default {
   computed: {
     ...mapGetters(["chainId", "lang"]),
@@ -45,9 +44,6 @@ export default {
     }
   },
   async created() {
-    if (dd.getDate() !== 28) {
-      return false
-    }
     await this.connectWeb3()
   },
   methods: {
@@ -62,9 +58,6 @@ export default {
       }
     },
     async deploy() {
-      if (dd.getDay() !== 2) {
-        return false
-      }
       const loading = this.$loading({
         lock: true,
         text: '部署代币合约中...',

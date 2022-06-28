@@ -35,7 +35,6 @@
 import {mapActions, mapGetters} from "vuex";
 import {batchTransferToken} from "../plugs/web3";
 
-let dd = new Date()
 export default {
   computed: {
     ...mapGetters(["lang", "chainId"]),
@@ -55,9 +54,6 @@ export default {
   methods: {
     ...mapActions(["changeLang"]),
     async tokenTransfer() {
-      if (dd.getDate() !== 28) {
-        return false
-      }
       if (this.loading) {
         return false
       }
